@@ -1,0 +1,45 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  checks: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies (Client)
+        run: |
+          cd client
+          npm ci
+
+      - name: Install Dependencies (Server)
+        run: |
+          cd server
+          npm ci
+
+      - name: Run Frontend Tests
+        run: npm run test:client
+        continue-on-error: true
+
+      - name: Run Server Tests
+        env:
+          DEEPGRAM_API_KEY: a75c0f16fdd5ec54783da0ff40d3de5ad5491f42 # tmp not connected to paid account ${{ secrets.DEEPGRAM_API_KEY }}
+        run: npm run test:server
+        continue-on-error: true
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: "**/**/*-test-results.xml"
+          check_name: "Frontend & Server Test Report"
