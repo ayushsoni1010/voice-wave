@@ -17,10 +17,49 @@ import Transcriber from "./transcriber.js";
  */
 
 const initializeWebSocket = (io) => {
+  const transcriber = new Transcriber();
+
   io.on("connection", (socket) => {
     console.log(`connection made (${socket.id})`);
 
-    // ... add needed event handlers and logic
+    socket.on("configure-stream", ({ sampleRate }) => {
+      console.log(`configure-stream: ${sampleRate}`);
+
+      transcriber.startTranscriptionStream();
+    });
+
+    socket.on("incoming-audio", (audioData) => {
+      console.log(`incoming audio: ${audioData}`);
+
+      transcriber.send(audioData);
+    });
+
+    socket.on("stop-stream", (stream) => {
+      console.log(`stop streamming: ${stream}`);
+      transcriber.endTranscriptionStream();
+    });
+
+    socket.on("disconnect", () => {
+      console.log(`Client disconnected: ${socket.id} `);
+    });
+
+    // Firstly emitting transcriber ready event
+    socket.emit("transcriber-ready", () => {});
+
+    //
+    socket.emit("final", () => {});
+
+    //
+    socket.emit("partial", () => {});
+
+    //
+    socket.emit("error", (err) => {
+      console.log(`error: ${err}`);
+    });
+  });
+
+  io.on("connection_error", (err) => {
+    console.log(`Connection error: ${err}`);
   });
 
   return io;
