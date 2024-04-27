@@ -25,7 +25,7 @@ const initializeWebSocket = (io) => {
     socket.on("configure-stream", ({ sampleRate }) => {
       console.log(`configure-stream: ${sampleRate}`);
 
-      transcriber.startTranscriptionStream();
+      transcriber.startTranscriptionStream(sampleRate);
     });
 
     socket.on("incoming-audio", (audioData) => {
@@ -44,13 +44,23 @@ const initializeWebSocket = (io) => {
     });
 
     // Firstly emitting transcriber ready event
-    socket.emit("transcriber-ready", () => {});
+    socket.emit("transcriber-ready", () => {
+      console.log("Transcriber ready");
+    });
+
+    socket.emit("sample", () => {
+      console.log("Sample");
+    });
 
     //
-    socket.emit("final", () => {});
+    socket.emit("final", () => {
+      console.log("Transcriber final");
+    });
 
     //
-    socket.emit("partial", () => {});
+    socket.emit("partial", () => {
+      console.log("Transcriber partial");
+    });
 
     //
     socket.emit("error", (err) => {

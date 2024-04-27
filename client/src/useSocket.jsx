@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import io from "socket.io-client";
 
 const serverURL = "http://localhost:8080";
@@ -7,27 +7,14 @@ const subscriptions = ["final", "partial", "transcriber-ready", "error"];
 
 // feel free to pass in any props
 const useSocket = () => {
-  const [socket, setSocket] = useState(null);
+  let socket;
   // ... free to add any state or variables
   const initialize = () => {
-    const _socket = io(serverURL);
-    setSocket(_socket);
+    socket = io(serverURL);
 
-    _socket.on("connect", () => {
+    socket.on("connect", () => {
       console.log("Connected");
     });
-
-    subscriptions.forEach((subscription) => {
-      _socket.on(subscription, (data) => {
-        console.log(`Received: ${subscription} ---> ${data}`);
-      });
-    });
-  };
-
-  const disconnect = () => {
-    if (socket) {
-      socket.emit("disconnect");
-    }
   };
 
   const onError = () => {
@@ -36,15 +23,22 @@ const useSocket = () => {
     });
   };
 
-  // Unmount the socket connection
+  const handleStartTransription = () => {
+    subscriptions.forEach((subscription) => {
+      socket.on(subscription, (data) => {
+        console.log(`Received: ${subscription} ---> ${data}`);
+      });
+    });
+  };
+
   useEffect(() => {
     return () => {
-      disconnect();
+      socket.disconnect();
     };
-  });
+  }, [socket]);
 
   // ... free to add more functions
-  return { initialize, disconnect, onError };
+  return { initialize, onError, handleStartTransription };
 };
 
 export default useSocket;
