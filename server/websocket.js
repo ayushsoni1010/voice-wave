@@ -1,4 +1,4 @@
-import Transcriber from "./transcriber.js";
+import Transcriber, { live } from "./transcriber.js";
 
 /**
  * Events to subscribe to:
@@ -20,55 +20,40 @@ const initializeWebSocket = (io) => {
   const transcriber = new Transcriber();
 
   io.on("connection", (socket) => {
-    console.log(`connection made (${socket.id})`);
+    socket.emit("welcome", "Welcome to the server!");
+    // console.log(`connection made (${socket.id})`);
 
-    socket.on("configure-stream", ({ sampleRate }) => {
-      console.log(`configure-stream: ${sampleRate}`);
+    socket.on("configure-stream", (data) => {
+      console.log(`configure-stream: ${JSON.stringify(data, null, 2)}`);
 
-      transcriber.startTranscriptionStream(sampleRate);
+      transcriber.initializeStream(data);
     });
 
-    socket.on("incoming-audio", (audioData) => {
-      console.log(`incoming audio: ${audioData}`);
+    socket.on("incoming-audio", async (audioData) => {
+      console.log(`incoming audio`);
+      // live(audioData);
+      console.log(audioData);
 
-      transcriber.send(audioData);
+      await transcriber.startTranscriptionStream();
+      await transcriber.send(audioData);
     });
 
-    socket.on("stop-stream", (stream) => {
+    socket.on("stop-stream", async (stream) => {
       console.log(`stop streamming: ${stream}`);
-      transcriber.endTranscriptionStream();
+      await transcriber.endTranscriptionStream();
     });
 
     socket.on("disconnect", () => {
       console.log(`Client disconnected: ${socket.id} `);
     });
 
-    // Firstly emitting transcriber ready event
-    socket.emit("transcriber-ready", () => {
-      console.log("Transcriber ready");
-    });
-
-    socket.emit("sample", () => {
-      console.log("Sample");
-    });
-
-    //
-    socket.emit("final", () => {
-      console.log("Transcriber final");
-    });
-
-    //
-    socket.emit("partial", () => {
-      console.log("Transcriber partial");
-    });
-
-    //
-    socket.emit("error", (err) => {
-      console.log(`error: ${err}`);
-    });
+    // socket.emit("transcriber-ready", "sample");
+    socket.emit("final", "sample");
+    socket.emit("partial", "sample");
+    socket.emit("error", "Connection error!");
   });
 
-  io.on("connection_error", (err) => {
+  io.on("connect_error", (err) => {
     console.log(`Connection error: ${err}`);
   });
 
