@@ -1,32 +1,55 @@
 import { useEffect, useState } from "react";
-import useAudioRecorder from "./useAudioRecorder";
-import useSocket from "./useSocket";
+import useAudioRecorder from "./hooks/useAudioRecorder";
+import useSocket from "./hooks/useSocket";
 
 // IMPORTANT: To ensure proper functionality and microphone access, please follow these steps:
 // 1. Access the site using 'localhost' instead of the local IP address.
 // 2. When prompted, grant microphone permissions to the site to enable audio recording.
 // Failure to do so may result in issues with audio capture and transcription.
-// NOTE: Don't use createPortal()
 
 function App() {
-  const { initialize, handleStartTransription } = useSocket();
+  const {
+    socket,
+    initialize,
+    handleStartTransription,
+    disconnect,
+    initializeStream,
+    sendStreamedAudio,
+  } = useSocket();
 
   const [transcription, setTrancription] = useState("");
   const [isTranscibing, setIsTranscibing] = useState(false);
+  const [data, setData] = useState();
 
   useEffect(() => {
     // Note: must connect to server on page load
-    initialize();
-  }, [initialize]);
+    if (socket === null) {
+      initialize();
+    }
 
-  const { startRecording, stopRecording, isRecording } = useAudioRecorder({
-    dataCb: (data) => {},
-  });
+    return () => {
+      disconnect();
+    };
+  }, [initialize, disconnect, socket]);
+
+  useEffect(() => {
+    if (data) {
+      sendStreamedAudio(data);
+    }
+  }, [data, sendStreamedAudio]);
+
+  const { startRecording, stopRecording, isRecording, togglePauseResume } =
+    useAudioRecorder({
+      dataCb: (data) => {
+        setData(data);
+      },
+    });
 
   const onStartRecordingPress = async () => {
     try {
-      await startRecording();
-      handleStartTransription();
+      const sampleRate = await startRecording();
+      initializeStream(sampleRate);
+      // handleStartTransription();
       setIsTranscibing(true);
     } catch (error) {
       console.log("Recording failed");
@@ -36,7 +59,9 @@ function App() {
 
   const onStopRecordingPress = async () => {
     stopRecording();
-    setIsTranscibing(false);
+    setTimeout(() => {
+      setIsTranscibing(false);
+    }, 3000);
   };
 
   const handleCopyClick = () => {
@@ -58,19 +83,16 @@ function App() {
         cols={50}
         onChange={(e) => setTrancription(e.target.value)}
       ></textarea>
-      {!isTranscibing ? (
-        <button
-          id="record-button"
-          onClick={onStartRecordingPress}
-          disabled={isRecording}
-        >
-          Record
+      {!isRecording ? (
+        <button id="record-button" onClick={onStartRecordingPress}>
+          {!isTranscibing ? "Start Recording" : "Loading..."}
         </button>
       ) : (
         <button id="record-button" onClick={onStopRecordingPress}>
-          Stop Recording
+          {!isTranscibing ? "Stop Recording" : "Loading..."}
         </button>
       )}
+      <button onClick={togglePauseResume}>Pause</button>
       <button id="copy-button" onClick={handleCopyClick}>
         Copy
       </button>
